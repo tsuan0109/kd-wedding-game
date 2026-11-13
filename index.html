@@ -695,7 +695,7 @@ function autoSubmit(attempt=0){
   rk.hidden=false;$('submit').hidden=true;
   if(!attempt){rk.className='rank wait';rk.textContent='⏳ 成績登記中⋯'}
   const url=BOARD_URL+'&reg=1&name='+e(PLAYER)+'&sec='+sec+'&id='+rid+'&dev='+DEV+'&plays='+PLAYS+'&fp='+FP+'&_='+Date.now();
-  const ac=window.AbortController?new AbortController():null;const tm=setTimeout(()=>ac&&ac.abort(),15000);
+  const ac=window.AbortController?new AbortController():null;const tm=setTimeout(()=>ac&&ac.abort(),30000);
   fetch(url,{cache:'no-store',keepalive:true,signal:ac?ac.signal:undefined}).then(r=>r.json()).then(r=>{clearTimeout(tm);if(rid!==runId)return;
     if(!r||!r.ok||!r.rank)throw new Error('not saved');
     rk.className='rank';rk.innerHTML='';
@@ -705,7 +705,7 @@ function autoSubmit(attempt=0){
     rk.append('✅ 成績已登記',a,c);
     if(r.rank<=3){const d=document.createElement('div');d.className='r3';d.textContent='🎁 目前在前三名得獎範圍內！';rk.append(d)}
   }).catch(()=>{clearTimeout(tm);if(rid!==runId)return;
-    if(attempt<3){rk.className='rank wait';rk.textContent='⏳ 網路有點慢，重新登記中⋯';setTimeout(()=>{if(rid===runId)autoSubmit(attempt+1)},1500*(attempt+1));return}
+    if(attempt<6){rk.className='rank wait';rk.textContent='⏳ 很多人同時登記，自動重試中⋯';setTimeout(()=>{if(rid===runId)autoSubmit(attempt+1)},1500*(attempt+1)+Math.random()*2000);return}
     rk.className='rank err';rk.textContent='⚠️ 成績還沒登記成功，請按下方「重新登記成績」';$('submit').hidden=false});
 }
 $('again').onclick=()=>{$('final').hidden=true;$('msg').textContent='';newRun()};
