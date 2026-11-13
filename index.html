@@ -378,7 +378,9 @@ function introCard(){
 }
 function clearLevel(){
   state='clear';dir=null;
-  const last=lvl>=LEVELS.length-1;if(last)totalMs=playMs;
+  const last=lvl>=LEVELS.length-1;if(last){totalMs=playMs;
+    /* send the score right away, while the guest is still looking at the revealed photo */
+    certDate=Date.now();runId=certDate.toString(36)+Math.random().toString(36).slice(2,8);runReady=true;autoSubmit()}
   setTimeout(()=>{
     $('cbE').textContent=last?'All Clear':`Stage ${lvl+1} Clear`;
     $('cbT').textContent=LEVELS[lvl].clearT;
@@ -660,8 +662,10 @@ function renderCert(){
 }
 let certCanvas=null,dlApi;
 function refreshCert(){certCanvas=renderCert();$('cert').src=certCanvas.toDataURL('image/png')}
+let runReady=false;
 function showFinal(){
-  certDate=Date.now();runId=certDate.toString(36)+Math.random().toString(36).slice(2,8);$('guest').value=PLAYER;$('playsline').textContent=`這支手機已經挑戰了 ${PLAYS} 次`;$('final').hidden=false;$('ov').hidden=true;setSubmit();autoSubmit();
+  if(!runReady){certDate=Date.now();runId=certDate.toString(36)+Math.random().toString(36).slice(2,8)}
+  $('guest').value=PLAYER;$('playsline').textContent=`這支手機已經挑戰了 ${PLAYS} 次`;$('final').hidden=false;$('ov').hidden=true;setSubmit();if(!runReady)autoSubmit();runReady=false;
   if(!dlApi){$('msg').textContent='按「下載通關證明」存到手機；如果沒反應，長按上方圖片選「儲存影像」也可以。';}
   (document.fonts?document.fonts.ready:Promise.resolve()).then(refreshCert);
   refreshCert();
