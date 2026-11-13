@@ -654,7 +654,7 @@ let certCanvas=null,dlApi;
 function refreshCert(){certCanvas=renderCert();$('cert').src=certCanvas.toDataURL('image/png')}
 function showFinal(){
   certDate=Date.now();runId=certDate.toString(36)+Math.random().toString(36).slice(2,8);$('guest').value=PLAYER;$('playsline').textContent=`這支手機已經挑戰了 ${PLAYS} 次`;$('final').hidden=false;$('ov').hidden=true;setSubmit();
-  if(!dlApi){$('dl').textContent='長按上方圖片即可儲存';$('dl').classList.add('alt');$('msg').textContent='這個瀏覽器不支援直接下載：長按圖片選「儲存影像」，或直接截圖傳給新郎';}
+  if(!dlApi){$('msg').textContent='按「下載通關證明」存到手機；如果沒反應，長按上方圖片選「儲存影像」也可以。';}
   (document.fonts?document.fonts.ready:Promise.resolve()).then(refreshCert);
   refreshCert();
 }
@@ -678,7 +678,13 @@ $('submit').addEventListener('click',e=>{if(!($('guest').value||'').trim()||!$('
 $('again').onclick=()=>{$('final').hidden=true;$('msg').textContent='';newRun()};
 $('dl').onclick=async()=>{
   refreshCert();
-  if(!dlApi){$('msg').textContent='這裡無法直接下載，請長按上方圖片儲存。';return}
+  if(!dlApi){
+    /* normal browser (the game's own website): plain file download */
+    try{const name=($('guest').value||'').trim()||'賓客';const du=certCanvas.toDataURL('image/png'),bin=atob(du.split(',')[1]),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+      const url=URL.createObjectURL(new Blob([u8],{type:'image/png'}));const a=document.createElement('a');a.href=url;a.download=`通關證明-${name}.png`;
+      document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$('msg').textContent='已下載，記得傳給新郎！沒看到檔案的話，長按上方圖片選「儲存影像」。'}
+    catch(e){$('msg').textContent='請長按上方圖片選「儲存影像」。'}
+    return}
   const blob=await new Promise(r=>certCanvas.toBlob(r,'image/png'));
   const name=($('guest').value||'').trim()||'賓客';
   try{await dlApi.save({filename:`通關證明-${name}.png`,data:blob});$('msg').textContent='已儲存，記得傳給新郎！'}
