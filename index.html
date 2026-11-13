@@ -123,6 +123,13 @@ a.go.alt{background:transparent;color:var(--ink)}
 a.go.off{background:transparent;color:#b85466;border:1px dashed var(--rose);cursor:not-allowed}
 a.go:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .namehint{margin:-4px 0 0;font-size:12.5px;line-height:1.6;color:#b85466}
+.final .rank{text-align:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 10px;line-height:1.5}
+.final .rank .rk{font-size:30px;font-weight:900;letter-spacing:.06em;color:var(--ink)}
+.final .rank .rk b{font-size:40px;color:#c99a45;margin:0 4px}
+.final .rank .r2{font-size:13px;color:var(--dim)}
+.final .rank .r3{font-size:14px;font-weight:700;color:#d4566a;margin-top:2px}
+.final .rank.wait{color:var(--dim);font-size:15px}
+.final .rank.err{color:#b2404f;font-size:14px}
 .final .msg{text-align:center;font-size:13px;color:var(--dim);min-height:1.2em}
 </style>
 
@@ -164,15 +171,16 @@ a.go:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
     <h1>兩關全破，恭喜通關！</h1>
     <p class="sub">把這張通關證明下載下來，傳給新郎確認吧</p>
     <p class="sub" id="playsline"></p>
-    <p class="gift" style="text-align:center">🎁 通關最快的前三名，會有小獎品喔！<br><span class="nodup">（不重複得獎）</span><br><span style="font-weight:500">記得登記成績，看看自己排第幾名</span></p>
+    <div class="rank" id="rank" hidden></div>
+    <p class="gift" style="text-align:center">🎁 通關最快的前三名，會有小獎品喔！<br><span class="nodup">（不重複得獎）</span></p>
     <img id="cert" alt="Q版新郎新娘牽手的通關證明">
     <label for="guest">你的名字（已綁定這支手機）</label>
     <input id="guest" maxlength="12" readonly autocomplete="off">
     <div class="btns">
-      <a class="go board" id="submit" target="_blank" rel="noopener" hidden>登記成績並看排行榜 ↗</a>
-      <a class="go alt board" id="board" target="_blank" rel="noopener" hidden>查看排行榜 ↗</a>
+      <a class="go board" id="submit" target="_blank" rel="noopener" hidden>重新登記成績 ↗</a>
+      <button class="go" id="again">再玩一次</button>
       <button class="go" id="dl">下載通關證明</button>
-      <button class="go alt" id="again">再玩一次</button>
+      <a class="go alt board" id="board" target="_blank" rel="noopener" hidden>查看排行榜 ↗</a>
     </div>
     <div class="msg" id="msg"></div>
   </div>
@@ -653,7 +661,7 @@ function renderCert(){
 let certCanvas=null,dlApi;
 function refreshCert(){certCanvas=renderCert();$('cert').src=certCanvas.toDataURL('image/png')}
 function showFinal(){
-  certDate=Date.now();runId=certDate.toString(36)+Math.random().toString(36).slice(2,8);$('guest').value=PLAYER;$('playsline').textContent=`這支手機已經挑戰了 ${PLAYS} 次`;$('final').hidden=false;$('ov').hidden=true;setSubmit();
+  certDate=Date.now();runId=certDate.toString(36)+Math.random().toString(36).slice(2,8);$('guest').value=PLAYER;$('playsline').textContent=`這支手機已經挑戰了 ${PLAYS} 次`;$('final').hidden=false;$('ov').hidden=true;setSubmit();autoSubmit();
   if(!dlApi){$('msg').textContent='按「下載通關證明」存到手機；如果沒反應，長按上方圖片選「儲存影像」也可以。';}
   (document.fonts?document.fonts.ready:Promise.resolve()).then(refreshCert);
   refreshCert();
@@ -662,19 +670,40 @@ let t;$('guest').addEventListener('input',()=>{clearTimeout(t);t=setTimeout(refr
 function certCode(){const name=($('guest').value||'').trim()||'神秘賓客';return hash(`${name}|${totalMs|0}|${lives}|${certDate}`).toString(16).toUpperCase().padStart(8,'0')}
 let runId='';
 function setSubmit(){
-  const show=!!BOARD_APP;$('submit').hidden=!show;$('board').hidden=!show;
+  const show=!!BOARD_APP;$('board').hidden=!show;
   if(!show)return;
   const name=($('guest').value||'').trim(),e=encodeURIComponent,sb=$('submit');
   if(name){
     sb.href=BOARD_URL+'&name='+e(name)+'&sec='+(totalMs/1000).toFixed(1)+'&id='+runId+'&dev='+DEV+'&plays='+PLAYS+'&fp='+FP;
-    sb.classList.remove('off');sb.removeAttribute('aria-disabled');sb.textContent='登記成績並看排行榜 ↗';
+    sb.classList.remove('off');sb.removeAttribute('aria-disabled');sb.textContent='重新登記成績 ↗';
   }else{
     sb.removeAttribute('href');sb.classList.add('off');sb.setAttribute('aria-disabled','true');sb.textContent='請先輸入名字才能登記成績';
   }
   $('board').href=BOARD_URL;
 }
 $('submit').addEventListener('click',e=>{if(!($('guest').value||'').trim()||!$('submit').getAttribute('href')){e.preventDefault();$('msg').textContent='請先輸入名字才能登記成績';$('guest').focus();return}
-  $('msg').textContent='已送出！排行榜會在新頁面打開，之後隨時按「查看排行榜」就能看到最新名次。'});
+  $('msg').textContent='已送出！排行榜會在新頁面打開。'});
+/* ---------- finished: send the score automatically and show this phone's rank ---------- */
+function fmtSec(s){s=Math.round(s);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function autoSubmit(attempt=0){
+  if(!BOARD_APP)return;
+  const rk=$('rank'),e=encodeURIComponent,sec=(totalMs/1000).toFixed(1),rid=runId;
+  rk.hidden=false;$('submit').hidden=true;
+  if(!attempt){rk.className='rank wait';rk.textContent='⏳ 成績登記中⋯'}
+  const url=BOARD_URL+'&reg=1&name='+e(PLAYER)+'&sec='+sec+'&id='+rid+'&dev='+DEV+'&plays='+PLAYS+'&fp='+FP+'&_='+Date.now();
+  const ac=window.AbortController?new AbortController():null;const tm=setTimeout(()=>ac&&ac.abort(),15000);
+  fetch(url,{cache:'no-store',signal:ac?ac.signal:undefined}).then(r=>r.json()).then(r=>{clearTimeout(tm);if(rid!==runId)return;
+    if(!r||!r.ok||!r.rank)throw new Error('not saved');
+    rk.className='rank';rk.innerHTML='';
+    const a=document.createElement('div');a.className='rk';a.append('你目前是第');const b=document.createElement('b');b.textContent=r.rank;a.append(b,'名');
+    const c=document.createElement('div');c.className='r2';
+    c.textContent=(r.bestId===rid?'這次 '+fmtSec(+sec)+' 是你的最佳成績！':'這次 '+fmtSec(+sec)+'・你的最佳成績 '+fmtSec(r.best))+'（共 '+r.total+' 位通關）';
+    rk.append('✅ 成績已登記',a,c);
+    if(r.rank<=3){const d=document.createElement('div');d.className='r3';d.textContent='🎁 目前在前三名得獎範圍內！';rk.append(d)}
+  }).catch(()=>{clearTimeout(tm);if(rid!==runId)return;
+    if(attempt<3){rk.className='rank wait';rk.textContent='⏳ 網路有點慢，重新登記中⋯';setTimeout(()=>{if(rid===runId)autoSubmit(attempt+1)},1500*(attempt+1));return}
+    rk.className='rank err';rk.textContent='⚠️ 成績還沒登記成功，請按下方「重新登記成績」';$('submit').hidden=false});
+}
 $('again').onclick=()=>{$('final').hidden=true;$('msg').textContent='';newRun()};
 $('dl').onclick=async()=>{
   refreshCert();
