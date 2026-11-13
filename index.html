@@ -696,7 +696,7 @@ function autoSubmit(attempt=0){
   if(!attempt){rk.className='rank wait';rk.textContent='⏳ 成績登記中⋯'}
   const url=BOARD_URL+'&reg=1&name='+e(PLAYER)+'&sec='+sec+'&id='+rid+'&dev='+DEV+'&plays='+PLAYS+'&fp='+FP+'&_='+Date.now();
   const ac=window.AbortController?new AbortController():null;const tm=setTimeout(()=>ac&&ac.abort(),15000);
-  fetch(url,{cache:'no-store',signal:ac?ac.signal:undefined}).then(r=>r.json()).then(r=>{clearTimeout(tm);if(rid!==runId)return;
+  fetch(url,{cache:'no-store',keepalive:true,signal:ac?ac.signal:undefined}).then(r=>r.json()).then(r=>{clearTimeout(tm);if(rid!==runId)return;
     if(!r||!r.ok||!r.rank)throw new Error('not saved');
     rk.className='rank';rk.innerHTML='';
     const a=document.createElement('div');a.className='rk';a.append('你目前是第');const b=document.createElement('b');b.textContent=r.rank;a.append(b,'名');
